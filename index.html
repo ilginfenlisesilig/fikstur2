@@ -1,111 +1,178 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IFL Fikstür</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IFL Okul Ligi Genel Fikstür</title>
+  <style>
+    body {
+      font-family: "Inter", sans-serif;
+      background-color: #111;
+      color: #eaeaea;
+      text-align: center;
+      padding: 20px;
+      margin: 0;
+    }
 
-<style>
-body {
-  font-family: "Inter", sans-serif;
-  background: #111;
-  color: #eee;
-  text-align: center;
-  padding: 20px;
-}
+    h1 {
+      font-size: 24px;
+      margin-bottom: 25px;
+      color: #f1f1f1;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
 
-h1 {
-  margin-bottom: 20px;
-}
+    #tables-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 25px;
+      width: 100%;
+    }
 
-.table-wrapper {
-  max-width: 900px;
-  margin: auto;
-  overflow-x: auto;
-}
+    .table-wrapper {
+      width: 100%;
+      max-width: 800px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: #1a1a1a;
-}
+    table {
+      table-layout: fixed;
+      border-collapse: collapse;
+      width: 100%;
+      background: #1a1a1a;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+      min-width: 450px;
+      margin: 0 auto;
+    }
 
-th, td {
-  padding: 10px;
-  border-bottom: 1px solid #333;
-  text-align: center;
-}
+    th, td {
+      padding: 12px 8px;
+      border-bottom: 1px solid #333;
+      text-align: center;
+      white-space: nowrap;
+      box-sizing: border-box;
+    }
 
-th {
-  background: #222;
-  color: #ccc;
-  text-transform: uppercase;
-}
+    /* Sütun genişlikleri görseldeki hiyerarşiye göre ayarlandı */
+    th:nth-child(1), td:nth-child(1) { width: 20%; } /* Tarih */
+    th:nth-child(2), td:nth-child(2) { width: 30%; font-weight: bold; } /* Ev Sahibi */
+    th:nth-child(3), td:nth-child(3) { width: 30%; font-weight: bold; } /* Deplasman */
+    th:nth-child(4), td:nth-child(4) { width: 20%; color: #ffcc00; } /* Skor */
 
-tr:nth-child(even) {
-  background: #181818;
-}
+    th {
+      background: #222;
+      color: #ccc;
+      text-transform: uppercase;
+      font-size: 13px;
+      letter-spacing: 1px;
+    }
 
-tr:hover {
-  background: #2a2a2a;
-}
-</style>
+    td {
+      color: #ddd;
+      font-size: 14px;
+    }
+
+    tr:nth-child(even) {
+      background: #181818;
+    }
+
+    tr:hover {
+      background: #2a2a2a;
+      transition: 0.2s ease;
+    }
+
+    .loading {
+      font-style: italic;
+      color: #888;
+    }
+
+    @media (max-width: 600px) {
+      body { padding: 10px; }
+      h1 { font-size: 18px; }
+      th, td { padding: 10px 5px; font-size: 12px; }
+      table { min-width: 350px; }
+    }
+  </style>
 </head>
-
 <body>
 
-<h1>IFL FİKSTÜR</h1>
+  <h1>IFL OKUL LİGİ GENEL FİKSTÜR</h1>
 
-<div class="table-wrapper">
-  <table id="table">
-    <thead>
-      <tr>
-        <th>Tarih</th>
-        <th>Ev Sahibi</th>
-        <th>Deplasman</th>
-        <th>Skor</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-</div>
+  <div id="tables-container">
+    <p class="loading">Fikstür güncelleniyor...</p>
+  </div>
 
-<script>
-const sheetId = "1u_61M8yOpSrLxKZ_H7edc6U75cpYSa5BOscC9t85FEw"; // kendi Sheet ID'ni buraya koy
-const gid = "0"; // sayfa numarası (genellikle 0)
+  <script>
+    // Google Sheet ID'niz (Aynı bıraktım)
+    const sheetId = "1MhE3AWvNAFi3RWXYZNGLuXF62s6UgaUMEZyAxgOw3Og";
+    const gid = "0";
+    const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
 
-const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
+    async function loadFixture() {
+      try {
+        const res = await fetch(csvUrl);
+        const text = await res.text();
+        
+        // Satırları ayır ve boş satırları temizle
+        const rows = text.split("\n")
+                         .map(r => r.split(","))
+                         .filter(row => row[0].trim() !== "");
 
-async function loadData() {
-  try {
-    const res = await fetch(url);
-    const text = await res.text();
+        const container = document.getElementById("tables-container");
+        container.innerHTML = "";
 
-    const rows = text.split("\n").map(r => r.includes(";") ? r.split(";") : r.split(","));
+        const wrapper = document.createElement("div");
+        wrapper.className = "table-wrapper";
 
-    const tbody = document.querySelector("#table tbody");
-    tbody.innerHTML = "";
+        const table = document.createElement("table");
+        const thead = document.createElement("thead");
+        const tbody = document.createElement("tbody");
 
-    // A1:D15 aralığı
-    rows.slice(0, 15).forEach(row => {
-      if (row.every(c => c.trim() === "")) return;
+        // Başlık Satırı (TARİH, EV SAHİBİ, DEPLASMAN, SKOR)
+        const headerRow = document.createElement("tr");
+        const headers = ["TARİH", "EV SAHİBİ", "DEPLASMAN", "SKOR"];
+        
+        headers.forEach(text => {
+          const th = document.createElement("th");
+          th.textContent = text;
+          headerRow.appendChild(th);
+        });
+        thead.appendChild(headerRow);
 
-      const tr = document.createElement("tr");
-      for (let i = 0; i < 4; i++) {
-        const td = document.createElement("td");
-        td.textContent = (row[i] || "").trim();
-        tr.appendChild(td);
+        // Veri Satırları (Sheets'teki ilk 4 sütunu çeker)
+        // Eğer Sheets'te başlık satırı varsa slice(1) yapın, yoksa slice(0)
+        rows.slice(1).forEach((row) => {
+          const tr = document.createElement("tr");
+          
+          // Sadece ilk 4 sütunu al (Tarih, Ev, Deplasman, Skor)
+          for (let i = 0; i < 4; i++) {
+            const td = document.createElement("td");
+            td.textContent = (row[i] || "").trim();
+            tr.appendChild(td);
+          }
+          tbody.appendChild(tr);
+        });
+
+        table.appendChild(thead);
+        table.appendChild(tbody);
+        wrapper.appendChild(table);
+        container.appendChild(wrapper);
+
+      } catch (err) {
+        document.getElementById("tables-container").innerHTML = "⚠️ Veri çekilirken bir hata oluştu: " + err.message;
       }
-      tbody.appendChild(tr);
-    });
-  } catch (err) {
-    document.querySelector("#table tbody").innerHTML = `<tr><td colspan="4">⚠️ Veri alınamadı: ${err.message}</td></tr>`;
-  }
-}
+    }
 
-loadData();
-setInterval(loadData, 60000); // 60 saniyede bir güncelle
-</script>
+    // İlk yükleme
+    loadFixture();
+    
+    // 60 saniyede bir otomatik yenileme
+    setInterval(loadFixture, 60000);
+  </script>
 
 </body>
 </html>
